@@ -1,0 +1,72 @@
+"OverallQual": 
+["Rates the overall material and finish of the house",
+"10	Very Excellent",
+"9	Excellent",
+"8	Very Good",
+"7	Good",
+"6	Above Average",
+"5	Average",
+"4	Below Average",
+"3	Fair",
+"2	Poor",
+"1	Very Poor"]
+,
+
+"SaleCondition": 
+["Condition of sale",
+"Normal	Normal Sale",
+"Abnorml	Abnormal Sale -  trade, foreclosure, short sale",
+"AdjLand	Adjoining Land Purchase",
+"Alloca	Allocation - two linked properties with separate deeds, typically condo with a garage unit	",
+"Family	Sale between family members",
+"Partial	Home was not completed when last assessed (associated with New Homes)"]
+,
+
+"BldgType":
+["Type of dwelling",
+"1Fam	Single-family Detached	",
+"2FmCon	Two-family Conversion; originally built as one-family dwelling",
+"Duplx	Duplex",
+"TwnhsE	Townhouse End Unit",
+"TwnhsI	Townhouse Inside Unit"]
+
+"HeatingQC": 
+["Heating quality and condition",
+"Ex	Excellent",
+"Gd	Good",
+"TA	Average/Typical",
+"Fa	Fair",
+"Po	Poor",]
+,
+
+"KitchenQual":
+["Kitchen quality",
+"Ex	Excellent",
+"Gd	Good",
+"TA	Typical/Average",
+"Fa	Fair",
+"Po	Poor",]
+,
+
+"RoofStyle":
+["Type of roof",
+"Flat	Flat",
+"Gable	Gable",
+"Gambrel	Gabrel (Barn)",
+"Hip	Hip",
+"Mansard	Mansard",
+"Shed	Shed",]
+,
+
+"SaleType":
+["Type of sale",
+"WD 	Warranty Deed - Conventional",
+"CWD	Warranty Deed - Cash",
+"VWD	Warranty Deed - VA Loan",
+"New	Home just constructed and sold",
+"COD	Court Officer Deed/Estate",
+"Con	Contract 15% Down payment regular terms",
+"ConLw	Contract Low Down payment and low interest",
+"ConLI	Contract Low Interest",
+"ConLD	Contract Low Down",
+"Oth	Other",]
