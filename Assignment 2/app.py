@@ -18,20 +18,19 @@ records["data_df"] = pd.read_csv("data/encoded_data.csv")
 records["whole_dataset"] = []
 records["stratified_sample"] = []
 records["random_sample"] = []
-records["data_type"] = None
+records["first_call"] = False
 
 print("Whole dataset loaded into RAM")
-
 
 @app.route('/', methods = ["GET"])
 def index():
 
     global records
 
-    if not records["data_type"]:
+    if not records["first_call"]:
         return render_template("index.html")
     else:
-        return render_template("index.html", data = records[records["data_type"]])
+        return render_template("index.html", data = records)
     # if request.method == 'POST':
     #    query = request.form['query']
     #    print(query)
@@ -49,87 +48,88 @@ def index():
 #     else:
 #         return {"a": 2}
 
-@app.route('/api/<data_type>', methods = ["GET"])
-def generate_data(data_type):
+@app.route('/api/generate_samples', methods = ["GET"])
+def generate_data():
 
     global records
     
     scaler = MinMaxScaler()
 
-    if data_type == "stratified":
+    # if samples made already, don't run code again
+    if not records["first_call"]:
+        
+        records["first_call"] = True
 
-        # if sample made already, don't run code again
-        if not records["stratified_sample"]:
-            print("First stratified call")
+        """
+        Code for PCA on whole dataset
 
-            optimal_k = 7
+        """
+        pca = PCA(n_components=15)
 
-            kmeanModel = KMeans(n_clusters=optimal_k, random_state=11)
-            kmeanModel.fit(records["data_df"])
+        pca.fit(scaler.fit_transform(records["data_df"]))
 
-            clusters = {i:[] for i in range(optimal_k)}
+        for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
+                                                    list(pca.explained_variance_ratio_)):
+            records["whole_dataset"].append({"feature":feature, "pca_variance":pca_variance, \
+                                                    "pca_variance_ratio":pca_variance_ratio})
 
-            cluster_labels = kmeanModel.labels_
+        # makes it easier to get 75% data variance
+        records["whole_dataset"] = sorted(records["whole_dataset"], key = lambda x: -x["pca_variance"])
 
-            for record, cluster_number in zip(records["data_df"].iterrows(), cluster_labels):
-                clusters[cluster_number].append(record[1])
 
-            percent = 0.25
-            stratified_sample = []
+        """
+        Code for random sampling + it's PCA
 
-            for cluster_number in clusters.keys():
-                stratified_sample.extend(sample(clusters[cluster_number], int(len(clusters[cluster_number]) * percent)))
+        """
+        # print("First random call")
+        random_sample = records["data_df"].sample(frac=0.25, random_state=11)
 
-            pca = PCA(n_components=15)
+        pca = PCA(n_components=15)
 
-            pca.fit(scaler.fit_transform(stratified_sample))
+        pca.fit(scaler.fit_transform(random_sample))
 
-            for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
-                                                                 list(pca.explained_variance_ratio_)):
-                records["stratified_sample"].append({"feature":feature, "pca_variance":pca_variance, \
-                                                     "pca_variance_ratio":pca_variance_ratio})
+        for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
+                                                    list(pca.explained_variance_ratio_)):
+            records["random_sample"].append({"feature":feature, "pca_variance":pca_variance, \
+                                                    "pca_variance_ratio":pca_variance_ratio})
 
-            # makes it easier to get 75% data variance
-            records["stratified_sample"] = sorted(records["stratified_sample"], key = lambda x: -x["pca_variance"])
+        # makes it easier to get 75% data variance
+        records["random_sample"] = sorted(records["random_sample"], key = lambda x: -x["pca_variance"])
 
-        records["data_type"] = "stratified_sample"
-    
-    elif data_type == "random":
+        """
+        Code for Stratified sampling + it's PCA
 
-        if not records["random_sample"]:
-            print("First random call")
-            random_sample = records["data_df"].sample(frac=0.25, random_state=11)
+        """
+        # print("First stratified call")
+        optimal_k = 7
 
-            pca = PCA(n_components=15)
+        kmeanModel = KMeans(n_clusters=optimal_k, random_state=11)
+        kmeanModel.fit(records["data_df"])
 
-            pca.fit(scaler.fit_transform(random_sample))
+        clusters = {i:[] for i in range(optimal_k)}
 
-            for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
-                                                        list(pca.explained_variance_ratio_)):
-                records["random_sample"].append({"feature":feature, "pca_variance":pca_variance, \
-                                                     "pca_variance_ratio":pca_variance_ratio})
+        cluster_labels = kmeanModel.labels_
 
-            # makes it easier to get 75% data variance
-            records["random_sample"] = sorted(records["random_sample"], key = lambda x: -x["pca_variance"])
+        for record, cluster_number in zip(records["data_df"].iterrows(), cluster_labels):
+            clusters[cluster_number].append(record[1])
 
-        records["data_type"] = "random_sample"
-    
-    elif data_type == "whole":
+        percent = 0.25
+        stratified_sample = []
 
-        if not records["whole_dataset"]:
-            pca = PCA(n_components=15)
+        for cluster_number in clusters.keys():
+            stratified_sample.extend(sample(clusters[cluster_number], int(len(clusters[cluster_number]) * percent)))
 
-            pca.fit(scaler.fit_transform(records["data_df"]))
+        pca = PCA(n_components=15)
 
-            for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
-                                                        list(pca.explained_variance_ratio_)):
-                records["whole_dataset"].append({"feature":feature, "pca_variance":pca_variance, \
-                                                     "pca_variance_ratio":pca_variance_ratio})
+        pca.fit(scaler.fit_transform(stratified_sample))
 
-            # makes it easier to get 75% data variance
-            records["whole_dataset"] = sorted(records["whole_dataset"], key = lambda x: -x["pca_variance"])
+        for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
+                                                                list(pca.explained_variance_ratio_)):
+            records["stratified_sample"].append({"feature":feature, "pca_variance":pca_variance, \
+                                                    "pca_variance_ratio":pca_variance_ratio})
 
-        records["data_type"] = "whole_dataset"
+        # makes it easier to get 75% data variance
+        records["stratified_sample"] = sorted(records["stratified_sample"], key = lambda x: -x["pca_variance"])
 
     return redirect(url_for('index'))
 
