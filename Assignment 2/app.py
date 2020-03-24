@@ -56,6 +56,8 @@ def generate_data(data_type):
     
     scaler = MinMaxScaler()
 
+    n_components = 15
+
     if data_type == "stratified":
 
         # if sample made already, don't run code again
@@ -80,9 +82,11 @@ def generate_data(data_type):
             for cluster_number in clusters.keys():
                 stratified_sample.extend(sample(clusters[cluster_number], int(len(clusters[cluster_number]) * percent)))
 
-            pca = PCA(n_components=15)
+            pca = PCA(n_components=n_components)
 
             pca.fit(scaler.fit_transform(stratified_sample))
+            pca_output = pd.DataFrame(data = pca.fit_transform(scaler.fit_transform(stratified_sample)), columns = ["pca_" + str(i) for i in range(n_components)])
+            records["stratified_sample"].append(pca_output)
 
             for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
                                                                  list(pca.explained_variance_ratio_)):
@@ -90,7 +94,7 @@ def generate_data(data_type):
                                                      "pca_variance_ratio":pca_variance_ratio})
 
             # makes it easier to get 75% data variance
-            records["stratified_sample"] = sorted(records["stratified_sample"], key = lambda x: -x["pca_variance"])
+            records["stratified_sample"] = [list(records["stratified_sample"][0].to_dict("records"))] + sorted(records["stratified_sample"][1:], key = lambda x: -x["pca_variance"])
 
         records["data_type"] = "stratified_sample"
     
@@ -100,26 +104,31 @@ def generate_data(data_type):
             print("First random call")
             random_sample = records["data_df"].sample(frac=0.25, random_state=11)
 
-            pca = PCA(n_components=15)
+            pca = PCA(n_components=n_components)
 
             pca.fit(scaler.fit_transform(random_sample))
+            pca_output = pd.DataFrame(data = pca.fit_transform(scaler.fit_transform(random_sample)), columns = ["pca_" + str(i) for i in range(n_components)])
 
+            records["random_sample"].append(pca_output)
+            
             for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
                                                         list(pca.explained_variance_ratio_)):
                 records["random_sample"].append({"feature":feature, "pca_variance":pca_variance, \
                                                      "pca_variance_ratio":pca_variance_ratio})
 
             # makes it easier to get 75% data variance
-            records["random_sample"] = sorted(records["random_sample"], key = lambda x: -x["pca_variance"])
+            records["random_sample"] = [list(records["random_sample"][0].to_dict("records"))] + sorted(records["random_sample"][1:], key = lambda x: -x["pca_variance"])
 
         records["data_type"] = "random_sample"
     
     elif data_type == "whole":
 
         if not records["whole_dataset"]:
-            pca = PCA(n_components=15)
+            pca = PCA(n_components=n_components)
 
             pca.fit(scaler.fit_transform(records["data_df"]))
+            pca_output = pd.DataFrame(data = pca.fit_transform(scaler.fit_transform(records["data_df"])), columns = ["pca_" + str(i) for i in range(n_components)])
+            records["whole_dataset"].append(pca_output)
 
             for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
                                                         list(pca.explained_variance_ratio_)):
@@ -127,7 +136,7 @@ def generate_data(data_type):
                                                      "pca_variance_ratio":pca_variance_ratio})
 
             # makes it easier to get 75% data variance
-            records["whole_dataset"] = sorted(records["whole_dataset"], key = lambda x: -x["pca_variance"])
+            records["whole_dataset"] = [list(records["whole_dataset"][0].to_dict("records"))] + sorted(records["whole_dataset"][1:], key = lambda x: -x["pca_variance"])
 
         records["data_type"] = "whole_dataset"
 
