@@ -40,8 +40,8 @@
         <div class="container-fluid">
             <br>
             <div id="accordion">
-                <div class="card">
-                    <div class="card-header" id="task12">
+                <div class="card" id="task12">
+                    <div class="card-header">
                         <a class="collapsed card-link" data-toggle="collapse" href="#collapseOne">
                             <i class="fa fa-angle-down rotate-icon"></i> &nbsp;Task 1 & 2
                         </a>
@@ -93,18 +93,25 @@
 
                             <div class="row" id="row2">
             
-                                <div class="col-md-4" id="r2c1">
+                                <div class="col-md-6" id="r2c1">
                                     Scatter1
                                 </div>
                                 
-                                <div class="col-md-4" id="r2c2">
+                                <div class="col-md-6" id="r2c2">
                                     Scatter2
                                 </div>
+                                
+                            </div>
 
-                                <div class="col-md-4" id="r2c3">
+                            <div class="row" id="row3">
+            
+                                <div class="col-md-6" id="r3c1">
                                     Scatter3
                                 </div>
-
+                                
+                                <div class="col-md-6" id="r3c2">
+                                    Scatter4
+                                </div>
                                 
                             </div>
 
@@ -126,8 +133,8 @@
             
             // document.getElementById("task12").addEventListener("click", call_task1_api);
 
-            $('#accordion').on('show.bs.collapse', function () {
-            //on clicking the accordion menu
+            $('#task12').on('show.bs.collapse', function () {
+            //on clicking the accordion menu for task 1
                 call_task1_api();
             });
 
@@ -144,7 +151,7 @@
                     success:function(responsedata){
                         // process on data
                         full_data = JSON.parse(responsedata);
-                        // console.log(full_data);
+                        console.log(full_data);
                         
                         // by default plot whole dataset
                         plotGraph("whole_dataset");
@@ -241,24 +248,9 @@
                     .attr("height", function(d) { return height - yAxis1(d.pca_variance); });
 
                 // Code for cumulative ratio curve and intrinsic dimensionality
-                var cum_data = [];
-                for (var i = 0; i < data.length; i++) {
-                    cum_data.push({"feature": data[i]["feature"], "pca_variance_ratio": data[i]["pca_variance_ratio"]});
-                }
-
-                for (var i = 1; i < cum_data.length; i++) {
-                    cum_data[i]["pca_variance_ratio"] += cum_data[i - 1]["pca_variance_ratio"];
-                }
-                
-                var intrinsic_dimensionality = 0;
-                for (var i = 1; i < cum_data.length; i++) {
-                    if (cum_data[i]["pca_variance_ratio"] <= 0.75) {
-                        intrinsic_dimensionality += 1;
-                    }
-                }
-
+                var cum_data = full_data["cumulative_pca_variance_ratio"][data_type];
+                var intrinsic_dimensionality = full_data["intrinsic_dimensionality"][data_type];
                 console.log("Intrinsic dimensionality = ", intrinsic_dimensionality);
-                // console.log(data);
 
                 var curve = d3.line()
                     .x(function(d) { return xAxis("feature "+ String(d.feature)); })
