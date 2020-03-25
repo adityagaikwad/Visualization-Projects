@@ -38,145 +38,248 @@
 
     <body>
         <div class="container-fluid">
+            <br>
+            <div id="accordion">
+                <div class="card">
+                    <div class="card-header" id="task12">
+                        <a class="collapsed card-link" data-toggle="collapse" href="#collapseOne">
+                            <i class="fa fa-angle-down rotate-icon"></i> &nbsp;Task 1 & 2
+                        </a>
+                    </div>
+                    <div id="collapseOne" class="collapse" data-parent="#accordion">
+                        <div class="card-body">
+                            <div class="col-md-6">
+                                <h5>
+                                   &nbsp; &nbsp; Click on one tab to see the corresponding Scree Plot
+                                </h5>
+                                <ul class="nav nav-tabs">
+                                    <li class="col-md-4">
+                                        <a class="nav-link" href="#" id="t1_whole_dataset">Whole dataset</a>
+                                    </li>
+                                    <li class="col-md-4">
+                                        <a class="nav-link" href="#" id="t1_random_sample">Random Sampling</a>
+                                    </li>
+                                    <li class="col-md-4">
+                                        <a class="nav-link" href="#" id="t1_stratified_sample">Stratified Sampling</a>
+                                    </li>
+                                  </ul>
+                            </div>
             
+                            <div class="row" id="row1">
+            
+                                <div class="col-md-6" id="r1c1">
+                                    <svg width="500" height="500">
+                
+                                    </svg>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                </div>
+                            
+                            </div>
+            
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" id="task3">
+                        <a class="collapsed card-link" data-toggle="collapse" href="#collapseTwo">
+                            <i class="fa fa-angle-down rotate-icon"></i> &nbsp;Task 3
+                        </a>
+                    </div>
+                    <div id="collapseTwo" class="collapse">
+                        <div class="card-body">
+
+                            <div class="row" id="row2">
+            
+                                <div class="col-md-4" id="r2c1">
+                                    Scatter1
+                                </div>
+                                
+                                <div class="col-md-4" id="r2c2">
+                                    Scatter2
+                                </div>
+
+                                <div class="col-md-4" id="r2c3">
+                                    Scatter3
+                                </div>
+
+                                
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            
+            </div>
+<!-- 
             <div id="task12">
                 
                 <br>
-                <div class="col-md-6">
-                    <h5>
-                       &nbsp; &nbsp; Click on one tab to see the corresponding Scree Plot
-                    </h5>
-                    <ul class="nav nav-tabs">
-                        <li class="col-md-4">
-                            <a class="nav-link" href="api/whole">Whole dataset</a>
-                        </li>
-                        <li class="col-md-4">
-                            <a class="nav-link" href="api/random">Random Sampling</a>
-                        </li>
-                        <li class="col-md-4">
-                            <a class="nav-link" href="api/stratified">Stratified Sampling</a>
-                        </li>
-                      </ul>
-                </div>
-
-                <div class="row" id="row1">
-
-                    <div class="col-md-6" id="r1c1">
-                        <svg width="500" height="500">
     
-                        </svg>
-                    </div>
-                    
-                    <div class="col-md-6">
-                    </div>
-                
-                </div>
-    
-            </div>
+            </div> -->
 
         </div>
 
         <script>
-
-            // get data from backend
-            var data = {{ data|safe }};
-            // console.log(data[0]);
-
-            // // clear all previous graphs
-            // d3.selectAll("g").remove();
-
-            // add svg
-            var height = $("#r1c1").height();
-            var width = $("#r1c1").width();
-            // console.log(height, width);
             
-            var svg = d3.selectAll("svg")
-                      .attr("width", width)
-                      .attr("height", height);
-            
-            var xAxis = d3.scaleBand().range([0, width]).padding(0.4),
-                yAxis1 = d3.scaleLinear().range([height, 0]),
-                yAxis2 = d3.scaleLinear().range([height, 0]);
+            // document.getElementById("task12").addEventListener("click", call_task1_api);
 
-            svg.append("g")
-                .attr("transform", "translate(" + 100 + "," + 40 + ")" + " scale(" + 0.8 + ")");
+            $('#accordion').on('show.bs.collapse', function () {
+            //on clicking the accordion menu
+                call_task1_api();
+            });
 
-            var xDomain = [];
-            for (var i = 0; i < data.length; i++) {
-                xDomain.push("feature "+ String(data[i]["feature"]));
+            var full_data;
+
+            function call_task1_api() {
+                $.ajax({
+                    type:"POST",//or POST
+                    url:'/api/generate_data',
+                                    //  (or whatever your url is)
+                    // data:{data1:var1},
+                    //can send multipledata like {data1:var1,data2:var2,data3:var3
+                    //can use dataType:'text/html' or 'json' if response type expected 
+                    success:function(responsedata){
+                        // process on data
+                        full_data = JSON.parse(responsedata);
+                        // console.log(full_data);
+                        
+                        // by default plot whole dataset
+                        plotGraph("whole_dataset");
+                    }
+                })
             }
 
-            xAxis.domain(xDomain);
-            yAxis1.domain([0, d3.max(data, function(d) { return +d.pca_variance })]).nice();
-            yAxis2.domain([0, 1]);
-
-            var g = d3.select("#r1c1").select("svg").select("g");
-
-            g.append("g")
-                .attr("transform", "translate(0," + height + ")")
-                .call(d3.axisBottom(xAxis))
-                .selectAll("text")	
-						.style("text-anchor", "end")
-						.attr("dx", "-.8em")
-						.attr("dy", ".15em")
-						.attr("transform", "rotate(-35)")
-					.append("text");
-
-            g.append('g')
-                .call(d3.axisLeft(yAxis1));
+            // add onclick for 3 nav bars and call graph function accordingly
+            document.getElementById("t1_whole_dataset").addEventListener("click", function() {
+                plotGraph("whole_dataset");
+            });
+ 
+            document.getElementById("t1_random_sample").addEventListener("click", function() {
+                plotGraph("random_sample");
+            });
+ 
+            document.getElementById("t1_stratified_sample").addEventListener("click", function() {
+                plotGraph("stratified_sample");
+            });
             
-            g.append("g")
-                .attr("transform", "translate( " + width + ", 0 )")
-                .call(d3.axisRight(yAxis2));
-        
-            g.append("g")
-                .selectAll(".bar")
-                .data(data)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", function(d) { return xAxis("feature "+ String(d.feature));})
-                .attr("y", function(d) { return yAxis1(d.pca_variance);})
-                .attr("width", xAxis.bandwidth())
-                .attr("height", function(d) { return height - yAxis1(d.pca_variance); });
 
-            // Code for cumulative ratio curve and intrinsic dimensionality
-            var cum_data = [];
-            for (var i = 0; i < data.length; i++) {
-                cum_data.push({"feature": data[i]["feature"], "pca_variance_ratio": data[i]["pca_variance_ratio"]});
-            }
+            function plotGraph(data_type) {
+                
+                var data = full_data[data_type];
 
-            for (var i = 1; i < cum_data.length; i++) {
-                cum_data[i]["pca_variance_ratio"] += cum_data[i - 1]["pca_variance_ratio"];
-            }
-            
-            var intrinsic_dimensionality = 0;
-            for (var i = 1; i < cum_data.length; i++) {
-                if (cum_data[i]["pca_variance_ratio"] <= 0.75) {
-                    intrinsic_dimensionality += 1;
+                // console.log(data_type);
+
+                // d3.select("#accordion").selectAll("li").select("a")
+                //     .classed("active", false);
+                
+                // d3.select("#t1" + data_type).select("a")
+                //     .classed("active", true);
+
+                // $('.nav.nav-tabs > li').on('click', function(e) {
+                //     $('.nav.nav-tabs > li').removeClass('active');
+                //     $(this).addClass('active');
+                // });  
+
+                d3.select("#r1c1").selectAll("g").remove();
+
+                // add svg
+                // try constant height and width
+                var height = $("#r1c1").height();
+                var width = $("#r1c1").width();
+                // console.log(height, width);
+                
+                var svg = d3.select("#r1c1").select("svg")
+                        .attr("width", width)
+                        .attr("height", height);
+                
+                var xAxis = d3.scaleBand().range([0, width]).padding(0.4),
+                    yAxis1 = d3.scaleLinear().range([height, 0]),
+                    yAxis2 = d3.scaleLinear().range([height, 0]);
+
+                svg.append("g")
+                    .attr("transform", "translate(" + 100 + "," + 40 + ")" + " scale(" + 0.8 + ")");
+
+                var xDomain = [];
+                for (var i = 0; i < data.length; i++) {
+                    xDomain.push("feature "+ String(data[i]["feature"]));
                 }
-            }
 
-            console.log("Intrinsic dimensionality = ", intrinsic_dimensionality);
-            console.log(cum_data);
+                xAxis.domain(xDomain);
+                yAxis1.domain([0, d3.max(data, function(d) { return +d.pca_variance })]).nice();
+                yAxis2.domain([0, 1]);
 
-            var curve = d3.line()
-                .x(function(d) { return xAxis("feature "+ String(d.feature)); })
-                .y(function(d) { return yAxis2(d.pca_variance_ratio); })
-                .curve(d3.curveMonotoneX);
+                var g = d3.select("#r1c1").select("svg").select("g");
 
-            g.append("g")
-                .append("path")
-                .datum(cum_data) // Binds data to the line 
-                .attr("class", "line")
-                .attr("d", curve); 
+                g.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(xAxis))
+                    .selectAll("text")	
+                            .style("text-anchor", "end")
+                            .attr("dx", "-.8em")
+                            .attr("dy", ".15em")
+                            .attr("transform", "rotate(-35)")
+                        .append("text");
+
+                g.append('g')
+                    .call(d3.axisLeft(yAxis1));
+                
+                g.append("g")
+                    .attr("transform", "translate( " + width + ", 0 )")
+                    .call(d3.axisRight(yAxis2));
             
-            g.append("svg:line")
-                .attr("x1", xAxis("feature "+ String(intrinsic_dimensionality - 1)) + xAxis.bandwidth() + xAxis.bandwidth()/3)
-                .attr("y1", height)
-                .attr("x2", xAxis("feature "+ String(intrinsic_dimensionality - 1)) + xAxis.bandwidth() + xAxis.bandwidth()/3)
-                .attr("y2", 0)
-                .style("stroke", "#000")
-                .style("stroke-width", 2);
+                g.append("g")
+                    .selectAll(".bar")
+                    .data(data)
+                    .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", function(d) { return xAxis("feature "+ String(d.feature));})
+                    .attr("y", function(d) { return yAxis1(d.pca_variance);})
+                    .attr("width", xAxis.bandwidth())
+                    .attr("height", function(d) { return height - yAxis1(d.pca_variance); });
+
+                // Code for cumulative ratio curve and intrinsic dimensionality
+                var cum_data = [];
+                for (var i = 0; i < data.length; i++) {
+                    cum_data.push({"feature": data[i]["feature"], "pca_variance_ratio": data[i]["pca_variance_ratio"]});
+                }
+
+                for (var i = 1; i < cum_data.length; i++) {
+                    cum_data[i]["pca_variance_ratio"] += cum_data[i - 1]["pca_variance_ratio"];
+                }
+                
+                var intrinsic_dimensionality = 0;
+                for (var i = 1; i < cum_data.length; i++) {
+                    if (cum_data[i]["pca_variance_ratio"] <= 0.75) {
+                        intrinsic_dimensionality += 1;
+                    }
+                }
+
+                console.log("Intrinsic dimensionality = ", intrinsic_dimensionality);
+                // console.log(data);
+
+                var curve = d3.line()
+                    .x(function(d) { return xAxis("feature "+ String(d.feature)); })
+                    .y(function(d) { return yAxis2(d.pca_variance_ratio); })
+                    .curve(d3.curveMonotoneX);
+
+                g.append("g")
+                    .append("path")
+                    .datum(cum_data) // Binds data to the line 
+                    .attr("class", "line")
+                    .attr("d", curve); 
+                
+                g.append("svg:line")
+                    .attr("x1", xAxis("feature "+ String(intrinsic_dimensionality - 1)) + xAxis.bandwidth() + xAxis.bandwidth()/3)
+                    .attr("y1", height)
+                    .attr("x2", xAxis("feature "+ String(intrinsic_dimensionality - 1)) + xAxis.bandwidth() + xAxis.bandwidth()/3)
+                    .attr("y2", 0)
+                    .style("stroke", "#000")
+                    .style("stroke-width", 2);
+
+            }
 
         </script>
     </body>

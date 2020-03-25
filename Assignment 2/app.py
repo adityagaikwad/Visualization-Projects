@@ -14,24 +14,35 @@ app = Flask(__name__)
 # Global variables initialization
 records = {}
 
-records["data_df"] = pd.read_csv("data/encoded_data.csv")
+data_df = pd.read_csv("data/encoded_data.csv")
 records["whole_dataset"] = []
 records["stratified_sample"] = []
 records["random_sample"] = []
-records["data_type"] = None
+
+records["data_loaded"] = False
+
+records["pca"] = {}
+records["pca"]["whole_dataset"] = None
+records["pca"]["stratified_sample"] = None
+records["pca"]["random_sample"] = None
+
+records["pca_loadings"] = {}
+records["pca_loadings"]["whole_dataset"] = None
+records["pca_loadings"]["stratified_sample"] = None
+records["pca_loadings"]["random_sample"] = None
 
 print("Whole dataset loaded into RAM")
-
 
 @app.route('/', methods = ["GET"])
 def index():
 
-    global records
+    # global records
 
-    if not records["data_type"]:
-        return render_template("index.html")
-    else:
-        return render_template("index.html", data = records[records["data_type"]])
+    # if not records["data_type"]:
+    return render_template("index.html")
+    # else:
+    #     return render_template("index.html", data = records[records["data_type"]], pca = records["pca"][records["data_type"]], \
+    #                                         pca_loadings = records["pca_loadings"][records["data_type"]])
     # if request.method == 'POST':
     #    query = request.form['query']
     #    print(query)
@@ -49,90 +60,102 @@ def index():
 #     else:
 #         return {"a": 2}
 
-@app.route('/api/<data_type>', methods = ["GET"])
-def generate_data(data_type):
+@app.route('/api/generate_data', methods = ["POST"])
+def generate_data():
 
     global records
     
     scaler = MinMaxScaler()
 
-    if data_type == "stratified":
+    if not records["data_loaded"]:
 
-        # if sample made already, don't run code again
-        if not records["stratified_sample"]:
-            print("First stratified call")
+        records["data_loaded"] = True
 
-            optimal_k = 7
+        """
+        Stratified sampling code
 
-            kmeanModel = KMeans(n_clusters=optimal_k, random_state=11)
-            kmeanModel.fit(records["data_df"])
+        """
+        print("First stratified call")
 
-            clusters = {i:[] for i in range(optimal_k)}
+        optimal_k = 7
 
-            cluster_labels = kmeanModel.labels_
+        kmeanModel = KMeans(n_clusters=optimal_k, random_state=11)
+        kmeanModel.fit(data_df)
 
-            for record, cluster_number in zip(records["data_df"].iterrows(), cluster_labels):
-                clusters[cluster_number].append(record[1])
+        clusters = {i:[] for i in range(optimal_k)}
 
-            percent = 0.25
-            stratified_sample = []
+        cluster_labels = kmeanModel.labels_
 
-            for cluster_number in clusters.keys():
-                stratified_sample.extend(sample(clusters[cluster_number], int(len(clusters[cluster_number]) * percent)))
+        for record, cluster_number in zip(data_df.iterrows(), cluster_labels):
+            clusters[cluster_number].append(record[1])
 
-            pca = PCA(n_components=15)
+        percent = 0.25
+        stratified_sample = []
 
-            pca.fit(scaler.fit_transform(stratified_sample))
+        for cluster_number in clusters.keys():
+            stratified_sample.extend(sample(clusters[cluster_number], int(len(clusters[cluster_number]) * percent)))
 
-            for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
-                                                                 list(pca.explained_variance_ratio_)):
-                records["stratified_sample"].append({"feature":feature, "pca_variance":pca_variance, \
-                                                     "pca_variance_ratio":pca_variance_ratio})
+        pca = PCA(n_components=15)
 
-            # makes it easier to get 75% data variance
-            records["stratified_sample"] = sorted(records["stratified_sample"], key = lambda x: -x["pca_variance"])
+        pca.fit(scaler.fit_transform(stratified_sample))
 
-        records["data_type"] = "stratified_sample"
+        for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
+                                                                list(pca.explained_variance_ratio_)):
+            records["stratified_sample"].append({"feature":feature, "pca_variance":pca_variance, \
+                                                    "pca_variance_ratio":pca_variance_ratio})
+
+        # makes it easier to get 75% data variance
+        records["stratified_sample"] = sorted(records["stratified_sample"], key = lambda x: -x["pca_variance"])
+        records["pca_loadings"]["stratified_sample"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
     
-    elif data_type == "random":
+    # if not records["random_sample"]:
 
-        if not records["random_sample"]:
-            print("First random call")
-            random_sample = records["data_df"].sample(frac=0.25, random_state=11)
+        """
+        Random sampling code
 
-            pca = PCA(n_components=15)
+        """
+        print("First random call")
+        random_sample = data_df.sample(frac=0.25, random_state=11)
 
-            pca.fit(scaler.fit_transform(random_sample))
+        pca = PCA(n_components=15)
 
-            for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
-                                                        list(pca.explained_variance_ratio_)):
-                records["random_sample"].append({"feature":feature, "pca_variance":pca_variance, \
-                                                     "pca_variance_ratio":pca_variance_ratio})
+        pca.fit(scaler.fit_transform(random_sample))
 
-            # makes it easier to get 75% data variance
-            records["random_sample"] = sorted(records["random_sample"], key = lambda x: -x["pca_variance"])
+        for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
+                                                    list(pca.explained_variance_ratio_)):
+            records["random_sample"].append({"feature":feature, "pca_variance":pca_variance, \
+                                                    "pca_variance_ratio":pca_variance_ratio})
 
-        records["data_type"] = "random_sample"
+        # makes it easier to get 75% data variance
+        records["random_sample"] = sorted(records["random_sample"], key = lambda x: -x["pca_variance"])
+        records["pca_loadings"]["random_sample"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
+        # records["pca"]["whole_dataset"] = pca.fit_transform()
     
-    elif data_type == "whole":
+    # if not records["whole_dataset"]:
 
-        if not records["whole_dataset"]:
-            pca = PCA(n_components=15)
+        """
+        PCA for the whole dataset
 
-            pca.fit(scaler.fit_transform(records["data_df"]))
+        """
+        pca = PCA(n_components=15)
 
-            for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
-                                                        list(pca.explained_variance_ratio_)):
-                records["whole_dataset"].append({"feature":feature, "pca_variance":pca_variance, \
-                                                     "pca_variance_ratio":pca_variance_ratio})
+        pca.fit(scaler.fit_transform(data_df))
 
-            # makes it easier to get 75% data variance
-            records["whole_dataset"] = sorted(records["whole_dataset"], key = lambda x: -x["pca_variance"])
+        for feature, pca_variance, pca_variance_ratio in zip(list(range(pca.n_components_)), list(pca.explained_variance_),\
+                                                    list(pca.explained_variance_ratio_)):
+            records["whole_dataset"].append({"feature":feature, "pca_variance":pca_variance, \
+                                                    "pca_variance_ratio":pca_variance_ratio})
 
-        records["data_type"] = "whole_dataset"
+        # makes it easier to get 75% data variance
+        records["whole_dataset"] = sorted(records["whole_dataset"], key = lambda x: -x["pca_variance"])
 
-    return redirect(url_for('index'))
+        records["pca_loadings"]["whole_dataset"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
+        # records["pca"]["whole_dataset"] = pca.fit_transform()
 
+    return json.dumps(records)
+
+# def calculate_intrinsic_dimensionality(pca):
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
