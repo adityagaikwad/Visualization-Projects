@@ -1,1 +1,8 @@
-collapse with tooltip
+Add labels to axes
+
+Top two PCA - pca.transform() - top two (first two) - confirm
+
+MDS (n_components = 2) - correlation - pairwise sklearn.metrics correlation (of whole sample) give in fit transform - dissimilarity precomputed
+    eculadian - dissimilarity = eculadian
+
+3 Highest PCA loaded attr - top 3 attr (Scatter plot matrix)

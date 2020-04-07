@@ -39,16 +39,16 @@ records["intrinsic_dimensionality"] = {}
 # records["intrinsic_dimensionality"]["stratified_sample"] = 0
 # records["intrinsic_dimensionality"]["random_sample"] = 0
 
-records["top_3_attributes"] = {}
-# records["top_3_attributes"]["whole_dataset"] = None
-# records["top_3_attributes"]["stratified_sample"] = None
-# records["top_3_attributes"]["random_sample"] = None
-
 saved_pca = {}
 # saved_pca["whole_dataset"] = None
 # saved_pca["stratified_sample"] = None
 # saved_pca["random_sample"] = None
 
+task3 = {}
+task3["top_2_pca"] = {}
+task3["top_3_loaded_attributes"] = {}
+task3["dataset"] = {}
+task3["mds"] = {}
 
 @app.route('/', methods = ["GET"])
 def index():
@@ -112,6 +112,10 @@ def generate_data():
         for cluster_number in clusters.keys():
             stratified_sample.extend(sample(clusters[cluster_number], int(len(clusters[cluster_number]) * percent)))
 
+        stratified_sample = pd.DataFrame(stratified_sample)
+
+        task3["dataset"]["stratified_sample"] = stratified_sample
+
         pca = PCA(n_components=15)
 
         pca.fit(scaler.fit_transform(stratified_sample))
@@ -128,7 +132,6 @@ def generate_data():
 
         # calculating cumulative ratio and intrinsic dimensionality
         calculate_cum_sum("stratified_sample")
-        get_loaded_attributes("stratified_sample")
 
         # records["pca_loadings"]["stratified_sample"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
     
@@ -138,7 +141,8 @@ def generate_data():
         """
         print("First random call")
         random_sample = data_df.sample(frac=0.25, random_state=11)
-
+        task3["dataset"]["random_sample"] = random_sample
+        
         pca = PCA(n_components=15)
 
         pca.fit(scaler.fit_transform(random_sample))
@@ -155,7 +159,6 @@ def generate_data():
 
         # calculating cumulative ratio and intrinsic dimensionality
         calculate_cum_sum("random_sample")
-        get_loaded_attributes("random_sample")
 
         # records["pca_loadings"]["random_sample"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
         # records["pca"]["whole_dataset"] = pca.fit_transform()
@@ -164,6 +167,9 @@ def generate_data():
         PCA for the whole dataset
 
         """
+
+        task3["dataset"]["whole_dataset"] = data_df
+
         pca = PCA(n_components=15)
 
         pca.fit(scaler.fit_transform(data_df))
@@ -180,7 +186,6 @@ def generate_data():
 
         # calculating cumulative ratio and intrinsic dimensionality
         calculate_cum_sum("whole_dataset")
-        get_loaded_attributes("whole_dataset")
 
         # records["pca_loadings"]["whole_dataset"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
         # records["pca"]["whole_dataset"] = pca.fit_transform()
@@ -200,6 +205,51 @@ def calculate_cum_sum(data_type):
         
         if records["cumulative_pca_variance_ratio"][data_type][i]["pca_variance_ratio"] <= 0.75:
             records["intrinsic_dimensionality"][data_type] += 1
+
+
+@app.route('/api/scatterplot_data', methods = ["POST"])
+def generate_scatterplot_data():
+
+    global task3, saved_pca
+
+    # if data is not available, make it available
+    if not records["data_loaded"]:
+        generate_data()
+
+    # we already have dataset loaded, in front-end use only those variables
+    if not task3["top_3_loaded_attributes"]:
+        get_loaded_attributes("whole_dataset")
+        get_loaded_attributes("random_sample")
+        get_loaded_attributes("stratified_sample")
+
+    # get top 2 PCA loadings for all samples
+    if not task3["top_2_pca"]:
+        
+        task3["top_2_pca"]["whole_dataset"] = saved_pca["whole_dataset"].transform(task3["dataset"]["whole_dataset"])[:, :2]
+        task3["top_2_pca"]["random_sample"] = saved_pca["random_sample"].transform(task3["dataset"]["random_sample"])[:, :2]
+        task3["top_2_pca"]["stratified_sample"] = saved_pca["stratified_sample"].transform(task3["dataset"]["stratified_sample"])[:, :2]
+
+        task3["top_2_pca"]["whole_dataset"] = pd.DataFrame({'PCA_1': task3["top_2_pca"]["whole_dataset"][:, 0], 'PCA_2': task3["top_2_pca"]["whole_dataset"][:, 1]}).to_dict("records")
+        task3["top_2_pca"]["random_sample"] = pd.DataFrame({'PCA_1': task3["top_2_pca"]["random_sample"][:, 0], 'PCA_2': task3["top_2_pca"]["random_sample"][:, 1]}).to_dict("records")
+        task3["top_2_pca"]["stratified_sample"] = pd.DataFrame({'PCA_1': task3["top_2_pca"]["stratified_sample"][:, 0], 'PCA_2': task3["top_2_pca"]["stratified_sample"][:, 1]}).to_dict("records")
+
+        task3["dataset"]["whole_dataset"] = task3["dataset"]["whole_dataset"].to_dict("records")
+        task3["dataset"]["random_sample"] = task3["dataset"]["random_sample"].to_dict("records")
+        task3["dataset"]["stratified_sample"] = task3["dataset"]["stratified_sample"].to_dict("records")
+
+    # generate mds data
+    """
+    Maybe use csvs directly
+    """
+    if not task3["mds"]:
+        generate_mds("whole_dataset")
+        generate_mds("random_sample")
+        generate_mds("stratified_sample")
+        
+    return json.dumps(task3)
+
+def generate_mds(data_type):
+    return None
 
 def get_loaded_attributes(data_type):
     
@@ -224,8 +274,9 @@ def get_loaded_attributes(data_type):
 
     feature_value.sort(key = lambda x: -x["squared_value"])
 
-    records["top_3_attributes"][data_type] = feature_value
+    task3["top_3_loaded_attributes"][data_type] = feature_value[:3]
 
+    # print(type(task3["top_3_loaded_attributes"][data_type]))
 
 if __name__ == '__main__':
     app.run(debug=True)
