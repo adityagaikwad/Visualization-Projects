@@ -12,7 +12,6 @@ import pandas as pd
 app = Flask(__name__)
 
 # Global variables initialization
-
 data_df = pd.read_csv("data/encoded_data.csv")
 print("Whole dataset loaded into RAM")
 
@@ -23,26 +22,10 @@ records["stratified_sample"] = []
 records["random_sample"] = []
 
 records["data_loaded"] = False
-
-# records["pca_loadings"] = {}
-# records["pca_loadings"]["whole_dataset"] = None
-# records["pca_loadings"]["stratified_sample"] = None
-# records["pca_loadings"]["random_sample"] = None
-
 records["cumulative_pca_variance_ratio"] = {}
-# records["cumulative_pca_variance_ratio"]["whole_dataset"] = None
-# records["cumulative_pca_variance_ratio"]["stratified_sample"] = None
-# records["cumulative_pca_variance_ratio"]["random_sample"] = None
-
 records["intrinsic_dimensionality"] = {}
-# records["intrinsic_dimensionality"]["whole_dataset"] = 0
-# records["intrinsic_dimensionality"]["stratified_sample"] = 0
-# records["intrinsic_dimensionality"]["random_sample"] = 0
 
 saved_pca = {}
-# saved_pca["whole_dataset"] = None
-# saved_pca["stratified_sample"] = None
-# saved_pca["random_sample"] = None
 
 task3 = {}
 task3["top_2_pca"] = {}
@@ -50,32 +33,11 @@ task3["top_3_loaded_attributes"] = {}
 task3["dataset"] = {}
 task3["mds"] = {}
 
+
 @app.route('/', methods = ["GET"])
 def index():
-
-    # global records
-
-    # if not records["data_type"]:
     return render_template("index.html")
-    # else:
-    #     return render_template("index.html", data = records[records["data_type"]], pca = records["pca"][records["data_type"]], \
-    #                                         pca_loadings = records["pca_loadings"][records["data_type"]])
-    # if request.method == 'POST':
-    #    query = request.form['query']
-    #    print(query)
-    #    di = {"name":"Aditya"}
-    #    temp = [1,2,3,4,5]
-    #    return render_template("index.html", temp = temp, di = di)
-    # elif request.method == "GET":
-    #     return render_template("index.html")
 
-# @app.route('/csv', methods = ["GET", "POST"])
-# def get_csv():
-#     if request.method == 'POST':
-#         sample = data_df.sample(frac=0.25, random_state=11)
-#         return {"test": sample.to_dict("records")}
-#     else:
-#         return {"a": 2}
 
 @app.route('/api/generate_data', methods = ["POST"])
 def generate_data():
@@ -132,8 +94,6 @@ def generate_data():
 
         # calculating cumulative ratio and intrinsic dimensionality
         calculate_cum_sum("stratified_sample")
-
-        # records["pca_loadings"]["stratified_sample"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
     
         """
         Random sampling code
@@ -159,9 +119,6 @@ def generate_data():
 
         # calculating cumulative ratio and intrinsic dimensionality
         calculate_cum_sum("random_sample")
-
-        # records["pca_loadings"]["random_sample"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
-        # records["pca"]["whole_dataset"] = pca.fit_transform()
     
         """
         PCA for the whole dataset
@@ -186,9 +143,6 @@ def generate_data():
 
         # calculating cumulative ratio and intrinsic dimensionality
         calculate_cum_sum("whole_dataset")
-
-        # records["pca_loadings"]["whole_dataset"] = pd.DataFrame(data = pca.components_, columns = ["pca_" + str(i) for i in range(pca.n_components_)]).to_dict("records")
-        # records["pca"]["whole_dataset"] = pca.fit_transform()
 
     return json.dumps(records)
 
@@ -237,19 +191,24 @@ def generate_scatterplot_data():
         task3["dataset"]["random_sample"] = task3["dataset"]["random_sample"].to_dict("records")
         task3["dataset"]["stratified_sample"] = task3["dataset"]["stratified_sample"].to_dict("records")
 
-    # generate mds data
     """
-    Maybe use csvs directly
+    MDS
+
+    Use pre-computed CSVs directly as execution takes time
+    
     """
     if not task3["mds"]:
-        generate_mds("whole_dataset")
-        generate_mds("random_sample")
-        generate_mds("stratified_sample")
+        task3["mds"]["euclidean"] = {}
+        task3["mds"]["euclidean"]["whole_dataset"] = pd.read_csv("data/mds_euclidean_whole_data.csv").to_dict("records")
+        task3["mds"]["euclidean"]["random_sample"] = pd.read_csv("data/mds_euclidean_random_data.csv").to_dict("records")
+        task3["mds"]["euclidean"]["stratified_sample"] = pd.read_csv("data/mds_euclidean_stratified_data.csv").to_dict("records")
+
+        task3["mds"]["correlation"] = {}
+        task3["mds"]["correlation"]["whole_dataset"] = pd.read_csv("data/mds_correlation_whole_data.csv").to_dict("records")
+        task3["mds"]["correlation"]["random_sample"] = pd.read_csv("data/mds_correlation_random_data.csv").to_dict("records")
+        task3["mds"]["correlation"]["stratified_sample"] = pd.read_csv("data/mds_correlation_stratified_data.csv").to_dict("records")
         
     return json.dumps(task3)
-
-def generate_mds(data_type):
-    return None
 
 def get_loaded_attributes(data_type):
     
@@ -274,9 +233,12 @@ def get_loaded_attributes(data_type):
 
     feature_value.sort(key = lambda x: -x["squared_value"])
 
-    task3["top_3_loaded_attributes"][data_type] = feature_value[:3]
+    variables = [value["variable"] for value in feature_value[:3]]
 
-    # print(type(task3["top_3_loaded_attributes"][data_type]))
+    # scaler = MinMaxScaler()
+    
+    task3["top_3_loaded_attributes"][data_type] = pd.DataFrame(data = task3["dataset"][data_type][variables], columns = variables).to_dict("records")
+
 
 if __name__ == '__main__':
     app.run(debug=True)
